@@ -1,35 +1,5 @@
 @import "tailwindcss";
 
-:root {
-  /* Dark mode first */
-  --background: #0B0F14;
-  --foreground: #E2E8F0;
-  
-  --card: #151A22;
-  --card-foreground: #E2E8F0;
-  
-  --popover: #151A22;
-  --popover-foreground: #E2E8F0;
-  
-  --primary: #3B82F6; /* Blue accent */
-  --primary-foreground: #FFFFFF;
-  
-  --secondary: #1E293B;
-  --secondary-foreground: #F8FAFC;
-  
-  --muted: #1E293B;
-  --muted-foreground: #94A3B8;
-  
-  --accent: #8B5CF6; /* Purple accent */
-  --accent-foreground: #FFFFFF;
-
-  --border: #1E293B;
-  --input: #1E293B;
-  --ring: #3B82F6;
-
-  --radius: 0.75rem;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -58,33 +28,130 @@
   --radius-sm: calc(var(--radius) - 4px);
 }
 
+:root, .theme-ink-wash {
+  /* Ink Wash - Premium Dark */
+  --background: #000000;
+  --foreground: #F2F2F7;
+  
+  --card: #121214;
+  --card-foreground: #F2F2F7;
+  
+  --popover: #1C1C1E;
+  --popover-foreground: #F2F2F7;
+  
+  --primary: #FFFFFF;
+  --primary-foreground: #000000;
+  
+  --secondary: #1C1C1E;
+  --secondary-foreground: #E5E5EA;
+  
+  --muted: #2C2C2E;
+  --muted-foreground: #8E8E93;
+  
+  --accent: #E5E5EA;
+  --accent-foreground: #000000;
+
+  --border: #38383A;
+  --input: #1C1C1E;
+  --ring: #FFFFFF;
+
+  --radius: 1rem;
+}
+
+.theme-stone-path {
+  /* Stone Path - Apple Light */
+  --background: #F5F5F7;
+  --foreground: #1D1D1F;
+  
+  --card: #FFFFFF;
+  --card-foreground: #1D1D1F;
+  
+  --popover: #FFFFFF;
+  --popover-foreground: #1D1D1F;
+  
+  --primary: #1D1D1F;
+  --primary-foreground: #FFFFFF;
+  
+  --secondary: #E8E8ED;
+  --secondary-foreground: #1D1D1F;
+  
+  --muted: #D2D2D7;
+  --muted-foreground: #86868B;
+  
+  --accent: #1D1D1F;
+  --accent-foreground: #FFFFFF;
+
+  --border: #D2D2D7;
+  --input: #FFFFFF;
+  --ring: #1D1D1F;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.5s ease, color 0.5s ease;
+  position: relative;
+  min-height: 100vh;
+}
+
+.canvas-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
 }
 
 .glass-panel {
-  background: rgba(21, 26, 34, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.command-bar {
+  background: color-mix(in srgb, var(--card) 95%, transparent);
+  backdrop-filter: blur(20px);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.haptic-button {
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.haptic-button:active {
+  transform: scale(0.96);
+}
+
+/* Custom shadow for Stone Path */
+.theme-stone-path .shadow-premium {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+
+/* Shadow for Ink Wash */
+.theme-ink-wash .shadow-premium {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
 }
 
 /* Scrollbar styles */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--muted);
-  border-radius: 4px;
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--muted-foreground);
 }

@@ -7,6 +7,8 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+import { Source } from "./SourcePanel";
+
 export type MessageRole = "user" | "ai" | "system" | "error";
 
 export interface Message {
@@ -14,6 +16,7 @@ export interface Message {
   role: MessageRole;
   content: string;
   citations?: string[];
+  sources?: Source[];
   isComplete?: boolean;
 }
 
@@ -29,53 +32,51 @@ export function ChatMessage({ message, onCitationClick }: ChatMessageProps) {
   return (
     <div
       className={cn(
-        "flex w-full px-4 py-6 text-sm",
-        isUser ? "bg-background" : "bg-card/50 border-y border-border/50",
-        isError && "bg-red-500/10 border-y border-red-500/20"
+        "flex w-full px-6 py-10 transition-colors",
+        isUser ? "bg-transparent" : "glass-panel shadow-premium my-4 rounded-3xl",
+        isError && "bg-destructive/5 border border-destructive/10"
       )}
     >
-      <div className="max-w-3xl mx-auto flex gap-4 w-full">
+      <div className="max-w-4xl mx-auto flex gap-6 w-full">
         {/* Avatar */}
         <div
           className={cn(
-            "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border",
+            "flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center border shadow-sm transition-transform hover:scale-110",
             isUser
-              ? "bg-secondary border-border text-foreground"
+              ? "bg-secondary border-white/5 text-foreground"
               : isError
-              ? "bg-red-500/20 border-red-500/30 text-red-400"
-              : "bg-primary/20 border-primary/30 text-primary"
+              ? "bg-destructive/20 border-destructive/30 text-destructive"
+              : "bg-foreground text-background"
           )}
         >
           {isUser ? (
-            <User className="w-5 h-5" />
+            <User className="w-6 h-6" />
           ) : isError ? (
-            <AlertCircle className="w-5 h-5" />
+            <AlertCircle className="w-6 h-6" />
           ) : (
-            <Sparkles className="w-5 h-5" />
+            <Sparkles className="w-6 h-6" />
           )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0 pt-1 leading-relaxed">
-          <div className={cn("prose prose-invert max-w-none text-foreground/90", 
-            isError && "text-red-400"
+          <div className={cn("text-base font-medium tracking-tight text-foreground/90 whitespace-pre-wrap", 
+            isError && "text-destructive"
           )}>
-            {/* Simple content renderer - in a real app, use react-markdown */}
-            {message.content.split('\n').map((line, i) => (
-               <p key={i} className="mb-2 last:mb-0">{line}</p>
-            ))}
+            {message.content}
           </div>
 
           {/* Citations */}
           {message.citations && message.citations.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-8 flex flex-wrap gap-2">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground w-full mb-1 font-bold">Sources Derived:</span>
               {message.citations.map((citation, i) => (
                 <button
                   key={i}
                   onClick={() => onCitationClick?.(citation)}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-border transition-colors cursor-pointer"
+                  className="haptic-button inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary/50 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary border border-white/5 transition-all shadow-sm"
                 >
-                  <span className="text-primary font-mono opacity-80">[{i + 1}]</span>
+                  <span className="text-primary font-bold">[{i + 1}]</span>
                   {citation}
                 </button>
               ))}

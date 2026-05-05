@@ -1,85 +1,137 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { MessageInput } from "@/components/MessageInput";
 import { ChatMessage, Message } from "@/components/ChatMessage";
 import { SourcePanel, Source } from "@/components/SourcePanel";
 import { AgentStatusIndicator, AgentState } from "@/components/AgentStatusIndicator";
-import { Bot, PanelRightClose, PanelRightOpen, Settings } from "lucide-react";
-
-// Mock initial state for demonstration
-const INITIAL_MESSAGES: Message[] = [
-  {
-    id: "1",
-    role: "ai",
-    content: "Hello! I am the Adaptive Agentic RAG system. I can search through your local documents or the web to answer your questions. What would you like to know?",
-  }
-];
-
-const MOCK_SOURCES: Source[] = [
-  {
-    id: "s1",
-    title: "LLM Powered Autonomous Agents",
-    url: "https://lilianweng.github.io/posts/2023-06-23-agent/",
-    snippet: "Agent memory is a key component of AI systems that enables agents to store, retrieve, and utilize information across interactions...",
-    relevanceScore: 0.95,
-  },
-  {
-    id: "s2",
-    title: "Prompt Engineering Guide",
-    snippet: "Techniques for optimizing language models through careful prompt construction...",
-    relevanceScore: 0.82,
-  }
-];
+import Sidebar from "@/components/Sidebar";
+import { apiRequest, authApi } from "@/lib/api";
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [agentState, setAgentState] = useState<AgentState>("idle");
   const [isSourcePanelOpen, setIsSourcePanelOpen] = useState(false);
   const [activeSources, setActiveSources] = useState<Source[]>([]);
+  const [highlightedSourceId, setHighlightedSourceId] = useState<string | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
 
-  // Call to FastAPI backend
+  const fetchUser = async () => {
+    try {
+      const data = await authApi.getMe();
+      setUser(data);
+    } catch (error) {
+      console.error("Failed to fetch user", error);
+    }
+  };
+
+  const handleCitationClick = (citationId: string) => {
+    setHighlightedSourceId(citationId);
+    setIsSourcePanelOpen(true);
+  };
+  const [theme, setTheme] = useState<"ink-wash" | "stone-path">("ink-wash");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const router = useRouter();
+
+  // Auth Guard
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+    } else {
+      setIsAuthenticated(true);
+      fetchUser();
+      // Initialize with a fresh greeting if no conversation selected
+      setMessages([{
+        id: "welcome",
+        role: "ai",
+        content: "Welcome back. I am your premium Agentic RAG assistant. How can I help you today?"
+      }]);
+    }
+  }, [router]);
+
+  // Theme Sync
+  useEffect(() => {
+    document.body.className = `theme-${theme}`;
+  }, [theme]);
+
+  const handleSelectConversation = async (id: string) => {
+    setCurrentConversationId(id);
+    setAgentState("thinking");
+    try {
+      const data = await apiRequest(`/conversations/${id}/messages`);
+      const formattedMessages: Message[] = data.map((msg: any) => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        sources: msg.sources
+      }));
+      setMessages(formattedMessages);
+      
+      // Open source panel if last message has sources
+      const lastMsg = formattedMessages[formattedMessages.length - 1];
+      if (lastMsg && lastMsg.role === "ai" && lastMsg.sources && lastMsg.sources.length > 0) {
+        setActiveSources(lastMsg.sources);
+        setIsSourcePanelOpen(true);
+      } else {
+        setIsSourcePanelOpen(false);
+      }
+    } catch (error) {
+      console.error("Failed to load messages", error);
+    } finally {
+      setAgentState("idle");
+    }
+  };
+
+  const handleNewChat = () => {
+    setCurrentConversationId(null);
+    setMessages([{
+      id: "welcome-" + Date.now(),
+      role: "ai",
+      content: "Started a new session. Ask me anything."
+    }]);
+    setIsSourcePanelOpen(false);
+    setActiveSources([]);
+  };
+
   const handleSubmit = async () => {
     if (!inputValue.trim()) return;
 
     const userQuestion = inputValue;
-    const newUserMsg: Message = { id: Date.now().toString(), role: "user", content: userQuestion };
+    const tempId = Date.now().toString();
+    const newUserMsg: Message = { id: tempId, role: "user", content: userQuestion };
+    
     setMessages((prev) => [...prev, newUserMsg]);
     setInputValue("");
-    setIsSourcePanelOpen(false);
-
-    // Initial state
-    setAgentState("retrieving");
+    setAgentState("thinking");
 
     try {
-      // Small visual delay before actual fetch so it feels responsive
-      await new Promise(r => setTimeout(r, 500));
-      setAgentState("thinking");
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiUrl}/chat`, {
+      const data = await apiRequest("/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ question: userQuestion }),
+        body: JSON.stringify({ 
+          question: userQuestion,
+          conversationId: currentConversationId 
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+      if (!currentConversationId) {
+        setCurrentConversationId(data.conversationId);
       }
-
-      const data = await response.json();
       
       setAgentState("generating");
-      await new Promise(r => setTimeout(r, 500)); // Visual transition
+      await new Promise(r => setTimeout(r, 300));
 
       const newAiMsg: Message = {
         id: data.id,
         role: data.role,
         content: data.content,
-        citations: data.citations
+        citations: data.citations,
+        sources: data.sources
       };
 
       setMessages((prev) => [...prev, newAiMsg]);
@@ -87,16 +139,16 @@ export default function ChatInterface() {
       if (data.sources && data.sources.length > 0) {
         setActiveSources(data.sources);
         setIsSourcePanelOpen(true);
-      } else {
-        setActiveSources([]);
       }
-
+      
+      // Update credits
+      fetchUser();
     } catch (error) {
       console.error("Error communicating with backend:", error);
       const errorMsg: Message = {
-        id: Date.now().toString(),
+        id: "err-" + Date.now(),
         role: "error",
-        content: "Sorry, I couldn't connect to the backend server. Is it running on port 8000?",
+        content: "Something went wrong. Please check your connection.",
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
@@ -104,89 +156,121 @@ export default function ChatInterface() {
     }
   };
 
-  const handleCitationClick = (citationTitle: string) => {
-    setIsSourcePanelOpen(true);
-    // In a real app, scroll to or highlight the specific source in the panel
-  };
+  if (!isAuthenticated) return null;
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      {/* Optional Left Sidebar - Simplified for layout */}
-      <aside className="w-16 md:w-64 border-r border-border bg-card hidden sm:flex flex-col">
-        <div className="p-4 border-b border-border flex items-center gap-2">
-          <Bot className="w-6 h-6 text-primary" />
-          <span className="font-semibold hidden md:block">Agentic RAG</span>
-        </div>
-        <div className="flex-1 p-4">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 hidden md:block">
-            Recent Chats
-          </div>
-          {/* Chat history list would go here */}
-        </div>
-        <div className="p-4 border-t border-border mt-auto flex justify-center md:justify-start">
-          <button className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-            <Settings className="w-5 h-5" />
-            <span className="hidden md:block text-sm">Settings</span>
-          </button>
-        </div>
-      </aside>
+    <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
+      <div className="canvas-grid" />
+      <Sidebar 
+        onSelectConversation={handleSelectConversation}
+        currentConversationId={currentConversationId}
+        onNewChat={handleNewChat}
+        onToggleTheme={() => setTheme(prev => prev === "ink-wash" ? "stone-path" : "ink-wash")}
+      />
 
-      {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col relative">
-        {/* Header */}
-        <header className="h-14 border-b border-border flex items-center justify-between px-4 glass-panel absolute top-0 w-full z-10">
-          <div className="font-medium text-sm flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            System Ready
+      <main className="flex-1 flex flex-col relative min-w-0">
+        <header className="h-20 border-b border-white/5 flex items-center justify-between px-10 glass-panel sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold tracking-tighter uppercase italic bg-gradient-to-r from-violet-400 to-fuchsia-500 bg-clip-text text-transparent">Aether</span>
+              <span className="px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-500 text-[10px] font-bold tracking-widest uppercase border border-violet-500/20">Pro</span>
+            </div>
+            <div className="h-4 w-px bg-white/10 mx-2" />
+            <div className={`w-2.5 h-2.5 rounded-full ${agentState === 'idle' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]'}`}></div>
+            <span className="font-bold tracking-widest text-[10px] uppercase text-muted-foreground/80">
+              {currentConversationId ? "Active Node" : "Quantum Session"}
+            </span>
           </div>
-          <button 
-            onClick={() => setIsSourcePanelOpen(!isSourcePanelOpen)}
-            className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-md hover:bg-muted"
-            title="Toggle Sources"
-          >
-            {isSourcePanelOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
-          </button>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Compute:</span>
+              <span className="text-xs font-bold text-emerald-500">${user?.credits?.toFixed(2) || '20.00'}</span>
+            </div>
+            <button 
+              onClick={() => setIsSourcePanelOpen(!isSourcePanelOpen)}
+              className="p-3 hover:bg-secondary/50 rounded-2xl text-muted-foreground transition-all hover:scale-105 active:scale-95"
+            >
+              {isSourcePanelOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
+            </button>
+          </div>
         </header>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto pt-16 pb-32">
-          <div className="flex flex-col">
-            {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} onCitationClick={handleCitationClick} />
-            ))}
-            
-            {/* Agent State Indicator inside chat flow */}
-            {agentState !== "idle" && (
-              <div className="px-4 py-4 w-full">
-                <div className="max-w-3xl mx-auto pl-[3.25rem]">
-                   <AgentStatusIndicator state={agentState} />
+        <div className="flex-1 overflow-y-auto pt-10 pb-64 px-6 custom-scrollbar">
+          <div className="max-w-5xl mx-auto space-y-12">
+            {!currentConversationId && messages.length <= 1 && (
+              <motion.div 
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center pt-20 pb-10 text-center"
+              >
+                <h1 className="text-7xl font-bold tracking-tighter mb-4 italic bg-gradient-to-br from-violet-400 via-fuchsia-500 to-indigo-500 bg-clip-text text-transparent">Aether</h1>
+                <p className="text-muted-foreground text-lg tracking-tight font-medium max-w-lg mx-auto">
+                  The Quantum Intelligence Layer for Advanced Operations
+                </p>
+                
+                <div className="mt-12 flex gap-4 text-muted-foreground/40 text-[10px] font-bold uppercase tracking-[0.2em]">
+                   <span>Connect with</span>
+                   <div className="flex gap-4 grayscale opacity-50">
+                      {/* Placeholder logos */}
+                      <span>Gmail</span>
+                      <span>Slack</span>
+                      <span>Notion</span>
+                      <span>GitHub</span>
+                   </div>
+                   <span>And many more</span>
                 </div>
-              </div>
+              </motion.div>
+            )}
+
+            <AnimatePresence mode="popLayout">
+              {messages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <ChatMessage 
+                    message={msg} 
+                    onCitationClick={handleCitationClick} 
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            
+            {agentState !== "idle" && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="pl-[3.5rem]"
+              >
+                <AgentStatusIndicator state={agentState} />
+              </motion.div>
             )}
           </div>
         </div>
 
-        {/* Input Area */}
-        <div className="absolute bottom-0 w-full bg-gradient-to-t from-background via-background to-transparent pt-10 pb-6 px-4">
-          <div className="max-w-3xl mx-auto">
+        <div className="absolute bottom-0 w-full bg-gradient-to-t from-background via-background to-transparent pt-20 pb-12 px-10">
+          <div className="max-w-4xl mx-auto">
             <MessageInput 
               value={inputValue} 
               onChange={setInputValue} 
               onSubmit={handleSubmit} 
               isLoading={agentState !== "idle"} 
             />
-            <div className="text-center mt-3 text-xs text-muted-foreground">
-              Agentic RAG can make mistakes. Consider verifying important information.
-            </div>
+            <p className="text-center mt-6 text-[10px] uppercase tracking-[0.3em] text-muted-foreground/30 font-bold">
+              Architect Intelligence System v2.1
+            </p>
           </div>
         </div>
       </main>
 
-      {/* Right Sidebar - Sources */}
       <SourcePanel 
         sources={activeSources} 
         isOpen={isSourcePanelOpen} 
         onClose={() => setIsSourcePanelOpen(false)} 
+        highlightedId={highlightedSourceId}
       />
     </div>
   );

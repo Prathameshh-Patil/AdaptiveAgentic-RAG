@@ -13,6 +13,11 @@ pytest
 langchain-chroma
 langchain-tavily==0.1.5
 langchain_aws
-langchain_google_genaipsycopg2-binary
+langchain_google_genai
+psycopg2-binary
 fastapi
 uvicorn
+sqlalchemy
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart

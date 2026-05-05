@@ -19,7 +19,6 @@ interface MessageInputProps {
 export function MessageInput({ value, onChange, onSubmit, isLoading }: MessageInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -37,14 +36,12 @@ export function MessageInput({ value, onChange, onSubmit, isLoading }: MessageIn
   };
 
   return (
-    <div className="relative flex items-end w-full max-w-3xl mx-auto bg-card border border-border rounded-xl shadow-sm focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary/50 transition-all">
-      {/* Optional: File Upload Button */}
+    <div className="relative flex items-end w-full max-w-4xl mx-auto command-bar rounded-[2.5rem] p-3 transition-all">
       <button 
         type="button"
-        className="p-3 text-muted-foreground hover:text-foreground transition-colors rounded-l-xl"
-        title="Attach file (Context for RAG)"
+        className="haptic-button p-5 text-muted-foreground hover:text-foreground transition-all rounded-[2rem] hover:bg-secondary/50 flex items-center justify-center"
       >
-        <Paperclip className="w-5 h-5" />
+        <Paperclip className="w-6 h-6" />
       </button>
 
       <textarea
@@ -52,25 +49,30 @@ export function MessageInput({ value, onChange, onSubmit, isLoading }: MessageIn
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Message the Agentic RAG system..."
-        className="flex-1 max-h-[200px] min-h-[44px] py-3 px-2 bg-transparent border-none resize-none focus:outline-none text-foreground placeholder:text-muted-foreground"
+        placeholder="Build me a knowledge base Perplexity app..."
+        className="flex-1 max-h-[200px] min-h-[64px] py-5 px-4 bg-transparent border-none resize-none focus:outline-none text-lg font-medium text-foreground placeholder:text-muted-foreground/40"
         rows={1}
       />
 
-      <button
-        onClick={() => {
-          if (value.trim() && !isLoading) onSubmit();
-        }}
-        disabled={!value.trim() || isLoading}
-        className={cn(
-          "p-2 m-2 rounded-lg flex items-center justify-center transition-all",
-          value.trim() && !isLoading
-            ? "bg-primary text-primary-foreground hover:bg-primary/90"
-            : "bg-muted text-muted-foreground cursor-not-allowed"
-        )}
-      >
-        <Send className="w-4 h-4" />
-      </button>
+      <div className="flex gap-2 p-1">
+        <button className="haptic-button p-4 rounded-full bg-secondary/50 text-muted-foreground hover:text-foreground transition-all">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+        </button>
+        <button
+          onClick={() => {
+            if (value.trim() && !isLoading) onSubmit();
+          }}
+          disabled={!value.trim() || isLoading}
+          className={cn(
+            "haptic-button p-4 rounded-full flex items-center justify-center transition-all shadow-lg",
+            value.trim() && !isLoading
+              ? "bg-foreground text-background"
+              : "bg-muted/50 text-muted-foreground cursor-not-allowed"
+          )}
+        >
+          <Send className={cn("w-6 h-6", isLoading && "animate-pulse")} />
+        </button>
+      </div>
     </div>
   );
 }
