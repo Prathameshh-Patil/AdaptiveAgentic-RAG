@@ -1,0 +1,13 @@
+{
+  "name": "adaptive-agentic-rag",
+  "version": "1.0.0",
+  "description": "Agentic Adaptive RAG with LangGraph",
+  "scripts": {
+    "dev": "python3 main.py",
+    "ingest": "python3 ingestion.py",
+    "test": "python3 -m pytest . -s -v"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
