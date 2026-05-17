@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, authApi } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight, LogOut, Palette, User, Settings, Layout, Layers, Database, Compass, BookOpen, HelpCircle } from 'lucide-react';
 import Link from 'next/link';

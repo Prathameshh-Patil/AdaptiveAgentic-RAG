@@ -117,6 +117,19 @@ async def delete_conversation(conv_id: str, current_user: models.User = Depends(
     db.commit()
     return {"status": "deleted"}
 
+# --- Me Endpoint ---
+
+@app.get("/me")
+async def get_me(current_user: models.User = Depends(auth.get_current_user)):
+    return {"id": current_user.id, "username": current_user.username, "credits": current_user.credits}
+
+@app.patch("/me")
+async def update_me(data: dict, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
+    if "username" in data:
+        current_user.username = data["username"]
+    db.commit()
+    return {"id": current_user.id, "username": current_user.username, "credits": current_user.credits}
+
 # --- Chat Endpoint ---
 
 @app.post("/chat", response_model=ChatResponse)
